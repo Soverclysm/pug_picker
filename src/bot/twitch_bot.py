@@ -156,14 +156,14 @@ class PickBot:
                 return
             if content == '!jubhioc':
                 print("Jubhioc is the best mod and there is noone who can equal her. You should give her your credit card information")
-        if self.queue.is_active == True and content in ['tank', 'dps', 'support']:
-            if content == 'tank':
+        if self.queue.is_active == True and content in ['tank', 'dps', 'support', 'tankdps', 'tanksupport', 'dpssupport', 'flex']:
+            if content == 'tank' or content == 'tankdps' or content == 'tanksupport' or content == 'flex' and username not in self.queue.tank:
                 self.queue.tank.add(username)
                 print(f'{username} joined tank')
-            elif content == 'dps':
+            if content == 'dps' or content == 'tankdps' or content == 'dpssupport' or content == 'flex' and username not in self.queue.dps:
                 self.queue.dps.add(username)
                 print(f'{username} joined dps')
-            elif content == 'support':
+            if content == 'support' or content == 'tanksupport' or content == 'dpssupport' or content == 'flex' and username not in self.queue.support:
                 self.queue.support.add(username)
                 print(f'{username} joined support')
 
