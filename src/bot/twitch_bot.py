@@ -146,7 +146,8 @@ class PickBot:
                     await self._send_status()
                 return
             elif content == '!allow_repeats' and self.queue.is_active == False and self._repeats_okay == False:
-                self._repeats_okay = True
+                self._repeats_okay = True#
+                self._already_played = set()
                 return
             elif content == '!disallow_repeats' and self.queue.is_active == False and self._repeats_okay == True:
                 self._repeats_okay = False
