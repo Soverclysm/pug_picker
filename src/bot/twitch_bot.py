@@ -17,7 +17,8 @@ class PickBot:
         self._repeats_okay = False
         self.chat_message_pattern = re.compile(r'^:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.*)$')
         self.websocket = None
-        self.reconnect_delay = 5  # Start with 5 seconds delay between reconnection attempts
+        self.reconnect_delay = 3  # Start with 3 seconds delay between
+        # reconnection attempts
 
     async def connect_and_run(self):
         while True:  # Main reconnection loop
@@ -54,7 +55,6 @@ class PickBot:
             print(f"Connection error: {str(e)}")
             raise  # Re-raise to trigger reconnection
 
-    # Rest of your existing methods remain unchanged...
 
 
     def _select_teams(self):
@@ -180,4 +180,50 @@ class PickBot:
             print(f'\nDPS: {len(self.queue.dps)}')
             print(f'\nSupports: {len(self.queue.support)}')
             print("==========================")
+
+
+    def toggle_queue(self):
+        """Method for Streamlit to toggle queue state"""
+        if self.queue.is_active:
+            self.queue.is_active = False
+            print('Queue stopped.')
+            return "Queue stopped"
+        else:
+            self.queue.tank.clear()
+            self.queue.dps.clear()
+            self.queue.support.clear()
+            self.queue.is_active = True
+            print('Queue started.')
+            return "Queue started"
+
+    def get_queue_status(self):
+        """Get current queue status for display"""
+        return {
+            'is_active': self.queue.is_active,
+            'tank_count': len(self.queue.tank),
+            'dps_count': len(self.queue.dps),
+            'support_count': len(self.queue.support),
+            'tank_players': list(self.queue.tank),
+            'dps_players': list(self.queue.dps),
+            'support_players': list(self.queue.support)
+        }
+
+    def toggle_repeats(self):
+        """Toggle whether repeat players are allowed"""
+        self._repeats_okay = not self._repeats_okay
+        if self._repeats_okay:
+            self._already_played.clear()
+        return self._repeats_okay
+
+    def generate_teams(self):
+        """Generate teams and return result"""
+        if self.queue.is_active:
+            return None, None, None, None, "Queue must be stopped before generating teams"
+
+        team1, team2, captain1, captain2 = self._select_teams()
+        if not all([team1, team2, captain1, captain2]):
+            return None, None, None, None, "Not enough unique players in each role"
+
+        return team1, team2, captain1, captain2, "Teams generated successfully"
+
 

@@ -1,5 +1,8 @@
 Pug Picker Bot
 =============
+Installation:
+Run install.bat once to install needed libraries. After that, you can either just use run.bat to start the bot, or create shortcut for run.bat to your desktop for convenience.
+
 
 Welcome to Pug Picker! This bot helps manage your Twitch channel's PUG (Pick-up Game) system.
 
