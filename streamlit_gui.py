@@ -32,7 +32,7 @@ def main():
         st.error("Not connected to Twitch")
 
     # Controls in a nice row
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("Toggle Queue"):
             status = bot.toggle_queue()
@@ -41,13 +41,25 @@ def main():
         if st.button("Toggle Repeats"):
             repeats = bot.toggle_repeats()
             st.info(f"Repeats {'enabled' if repeats else 'disabled'}")
+    with col3:
+        if st.button('Reenable Queue without clearing'):
+            bot.queue.is_active = 'active'
 
     # Queue status with refresh button side by side
-    col1, col2 = st.columns([3, 1])  # 3:1 ratio for status vs button
+    col1, col2, col3 = st.columns([3, 1, 2])  # 3:1 ratio for status vs button
     with col1:
         st.header("Queue Status")
     with col2:
         st.button("Refresh Queue", key="refresh_queue")
+    with col3:
+        if st.button('Enough Players?'):
+            all_players = bot.queue.support | bot.queue.tank | bot.queue.dps
+            valid_players = all_players - bot._already_played
+            if len(valid_players) < 10:
+                st.write(f'There is not enough players, only '
+                         f'{len(valid_players)} valid players.')
+            if len(valid_players) >= 10:
+                st.write('Yeah! YIPPIE')
 
     # Status metrics
     col1, col2, col3 = st.columns(3)
@@ -109,9 +121,12 @@ def main():
         with col1:
             if st.button('Team Red'):
                 bot.winner1()
+                bot.queue.is_active = 'inactive'
         with col2:
             if st.button('Team Blue'):
                 bot.winner2()
+                bot.queue.is_active = 'inactive'
+
     else:
         st.subheader('No game active!')
 if __name__ == "__main__":
