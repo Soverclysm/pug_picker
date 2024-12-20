@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 
 
+
 @dataclass
 class Queue:
-    is_active: bool = False
+    is_active: str = 'inactive'
     tank: set[str] = None
     dps: set[str] = None
     support: set[str] = None

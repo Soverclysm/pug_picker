@@ -76,13 +76,14 @@ def main():
                 st.write(player)
 
     st.header('Team selection')
-    if bot.queue.is_active:
+    if bot.queue.is_active == 'active':
         st.write('Queue must be stopped before generating teams!')
     else:
         if st.button('Generate Teams'):
             team1, team2, captain1, captain2, message = bot.generate_teams()
             if team1 and team2:
                 st.success('Generated Teams!')
+                bot.queue.is_active = 'ingame'
                 col1, col2 = st.columns(2)
 
                 with col1:
@@ -101,7 +102,18 @@ def main():
             else:
                 st.error('Not enough unique players in the queue')
 
-
+    st.header('Game management:')
+    if bot.queue.is_active == 'ingame':
+        st.subheader('Winner:')
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button('Team Red'):
+                bot.winner1()
+        with col2:
+            if st.button('Team Blue'):
+                bot.winner2()
+    else:
+        st.subheader('No game active!')
 if __name__ == "__main__":
     import sys
     import streamlit.web.bootstrap

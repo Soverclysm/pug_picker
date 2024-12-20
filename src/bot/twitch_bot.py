@@ -4,6 +4,8 @@ import random
 import re
 from src.config.settings import *
 from src.bot.queue import Queue
+from src.bot.game_log import *
+
 
 class PickBot:
     def __init__(self):
@@ -15,10 +17,11 @@ class PickBot:
         self.account_name = TWITCH_BOT_USERNAME
         self.token = TWITCH_OAUTH_TOKEN
         self._repeats_okay = False
-        self.chat_message_pattern = re.compile(r'^:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.*)$')
+        self.chat_message_pattern = re.compile(
+            r'^:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.*)$')
         self.websocket = None
-        self.reconnect_delay = 3  # Start with 3 seconds delay between
-        # reconnection attempts
+        self.reconnect_delay = 3
+        self.current_game = None
 
     async def connect_and_run(self):
         while True:  # Main reconnection loop
@@ -26,7 +29,8 @@ class PickBot:
                 await self.connect()
             except Exception as e:
                 print(f"\nConnection lost: {str(e)}")
-                print(f"Attempting to reconnect in {self.reconnect_delay} seconds...")
+                print(
+                    f"Attempting to reconnect in {self.reconnect_delay} seconds...")
                 await asyncio.sleep(self.reconnect_delay)
                 print("Reconnecting...")
 
@@ -42,7 +46,8 @@ class PickBot:
                 await websocket.send(f"NICK commanderx\r\n")
                 await websocket.send(f"JOIN #{self.channel_name}\r\n")
 
-                print(f"{self.account_name} connected to {self.channel_name}. Awaiting commands from {self.starter_names}")
+                print(
+                    f"{self.account_name} connected to {self.channel_name}. Awaiting commands from {self.starter_names}")
 
                 while True:
                     message = await websocket.recv()
@@ -54,8 +59,6 @@ class PickBot:
         except Exception as e:
             print(f"Connection error: {str(e)}")
             raise  # Re-raise to trigger reconnection
-
-
 
     def _select_teams(self):
         queued_tanks = set(self.queue.tank)
@@ -70,7 +73,8 @@ class PickBot:
             valid_dps = queued_dps
             valid_supports = queued_support
 
-        if len(valid_tanks) < 2 or len(valid_dps) < 4 or len(valid_supports) < 4:
+        if len(valid_tanks) < 2 or len(valid_dps) < 4 or len(
+                valid_supports) < 4:
             return None, None, None, None
 
         selected_tanks = random.sample(list(valid_tanks), 2)
@@ -90,13 +94,18 @@ class PickBot:
 
         selected_supports = random.sample(list(valid_supports), 4)
 
-        self._already_played.update(set(selected_tanks), set(selected_dps), set(selected_supports))
+        self._already_played.update(set(selected_tanks), set(selected_dps),
+                                    set(selected_supports))
 
-        team_1 = {'tank': selected_tanks[0], 'dps': selected_dps[0:2], 'support': selected_supports[0:2]}
-        team_2 = {'tank': selected_tanks[1], 'dps': selected_dps[2:4], 'support': selected_supports[2:4]}
+        team_1 = {'tank': selected_tanks[0], 'dps': selected_dps[0:2],
+                  'support': selected_supports[0:2]}
+        team_2 = {'tank': selected_tanks[1], 'dps': selected_dps[2:4],
+                  'support': selected_supports[2:4]}
 
-        team_1_set = {team_1['tank']} | set(team_1['dps']) | set(team_1['support'])
-        team_2_set = {team_2['tank']} | set(team_2['dps']) | set(team_2['support'])
+        team_1_set = {team_1['tank']} | set(team_1['dps']) | set(
+            team_1['support'])
+        team_2_set = {team_2['tank']} | set(team_2['dps']) | set(
+            team_2['support'])
 
         captain1 = random.choice(list(team_1_set))
         captain2 = random.choice(list(team_2_set))
@@ -114,18 +123,27 @@ class PickBot:
         content = content.lower().strip()
 
         if username in self.starter_names:
+
+            if content == '!admin_test':
+                print("\n=== Admin test! ===")
+                self.queue.tank.update(('tank1', 'tank2'))
+                self.queue.dps.update(('dps1', 'dps2', 'dps3', 'dps4'))
+                self.queue.support.update(('support1', 'support2', 'support3',
+                                           'support4'))
+
+
             if content == '!start':
-                self.queue.is_active = True
+                self.queue.is_active = 'active'
                 self.queue.tank.clear()
                 self.queue.dps.clear()
                 self.queue.support.clear()
                 print("\n=== Queue started! ===")
 
             elif content == '!stop':
-                self.queue.is_active = False
+                self.queue.is_active = 'inactive'
                 print("\n=== Queue stopped! ===")
 
-            elif content == '!pick' and self.queue.is_active == False:
+            elif content == '!pick' and self.queue.is_active == 'inactive':
                 team1, team2, team_1_captain, team_2_captain = self._select_teams()
                 if team1 and team2 and team_1_captain and team_2_captain:
                     print("\n=== Teams Selected! ===")
@@ -139,25 +157,58 @@ class PickBot:
                     print(f"  DPS: {', '.join(team2['dps'])}")
                     print(f"  Support: {', '.join(team2['support'])}")
                     print(f"  Captain: {team_2_captain}")
+
+                    self.current_game = Game(team_1_tank=team1['tank'],
+                                             team_1_dps1=team1['dps'][0],
+                                             team_1_dps2=team1['dps'][1],
+                                             team_1_support1=team1[
+                                                 'support'][0],
+                                             team_1_support2=team1[
+                                                 'support'][1],
+                                             team_2_tank=team2['tank'],
+                                             team_2_dps1=team2['dps'][0],
+                                             team_2_dps2=team2['dps'][1],
+                                             team_2_support1=team2['support'][
+                                                 0],
+                                             team_2_support2=team2[
+                                                 'support'][1],
+                                             team_1_captain=team_1_captain,
+                                             team_2_captain=team_2_captain
+                                             )
+                    self.queue.is_active = 'ingame'
+
+
                 else:
                     print("\nNot enough unique players in each role for teams!")
-                    print("Need: 2 unique tanks, 4 unique dps, 4 unique supports")
-                    print("(Players picked for one role won't be picked for other roles)")
+                    print(
+                        "Need: 2 unique tanks, 4 unique dps, 4 unique supports")
+                    print(
+                        "(Players picked for one role won't be picked for other roles)")
                     await self._send_status()
                 return
-            elif content == '!allow_repeats' and self.queue.is_active == False and self._repeats_okay == False:
-                self._repeats_okay = True#
+
+            elif (content == '!allow_repeats' and self.queue.is_active ==
+                  'inactive' and self._repeats_okay == False):
+                self._repeats_okay = True  #
                 self._already_played = set()
                 return
-            elif content == '!disallow_repeats' and self.queue.is_active == False and self._repeats_okay == True:
+            elif (content == '!disallow_repeats' and self.queue.is_active ==
+                  'inactive' and self._repeats_okay == True):
                 self._repeats_okay = False
                 return
+
             if content == '!status':
                 await self._send_status()
                 return
+
             if content == '!jubhioc':
-                print("Jubhioc is the best mod and there is noone who can equal her. You should give her your credit card information")
-        if self.queue.is_active == True and content in ['tank', 'dps', 'support', 'tankdps', 'tanksupport', 'dpssupport', 'flex']:
+                print(
+                    "Jubhioc is the best mod and there is noone who can equal her. You should give her your credit card information")
+
+        if self.queue.is_active == 'active' and content in ['tank', 'dps',
+                                                        'support', 'tankdps',
+                                                        'tanksupport',
+                                                        'dpssupport', 'flex']:
             if content == 'tank' or content == 'tankdps' or content == 'tanksupport' or content == 'flex' and username not in self.queue.tank:
                 self.queue.tank.add(username)
                 print(f'{username} joined tank')
@@ -168,12 +219,11 @@ class PickBot:
                 self.queue.support.add(username)
                 print(f'{username} joined support')
 
-
     async def _send_status(self):
-        if not self.queue.is_active:
+        if self.queue.is_active == 'inactive':
             print('\nQueue is not currently active.')
 
-        else:
+        if self.queue.is_active == 'active':
             print("\n=== Current Queue Status ===")
             print('\nQueue is currently active.')
             print(f'\nTanks: {len(self.queue.tank)}')
@@ -181,18 +231,21 @@ class PickBot:
             print(f'\nSupports: {len(self.queue.support)}')
             print("==========================")
 
+        if self.queue.is_active == 'ingame':
+            print("\n=== Current Queue Status ===")
+            print('\nCurrently in game.')
 
     def toggle_queue(self):
         """Method for Streamlit to toggle queue state"""
-        if self.queue.is_active:
-            self.queue.is_active = False
+        if self.queue.is_active == 'active':
+            self.queue.is_active = 'inactive'
             print('Queue stopped.')
             return "Queue stopped"
-        else:
+        if self.queue.is_active == 'inactive':
             self.queue.tank.clear()
             self.queue.dps.clear()
             self.queue.support.clear()
-            self.queue.is_active = True
+            self.queue.is_active = 'active'
             print('Queue started.')
             return "Queue started"
 
@@ -217,13 +270,40 @@ class PickBot:
 
     def generate_teams(self):
         """Generate teams and return result"""
-        if self.queue.is_active:
+        if self.queue.is_active == 'active':
             return None, None, None, None, "Queue must be stopped before generating teams"
 
         team1, team2, captain1, captain2 = self._select_teams()
         if not all([team1, team2, captain1, captain2]):
             return None, None, None, None, "Not enough unique players in each role"
 
+        self.current_game = Game(team_1_tank=team1['tank'],
+                                 team_1_dps1=team1['dps'][0],
+                                 team_1_dps2=team1['dps'][1],
+                                 team_1_support1=team1[
+                                     'support'][0],
+                                 team_1_support2=team1[
+                                     'support'][1],
+                                 team_2_tank=team2['tank'],
+                                 team_2_dps1=team2['dps'][0],
+                                 team_2_dps2=team2['dps'][1],
+                                 team_2_support1=team2['support'][
+                                     0],
+                                 team_2_support2=team2[
+                                     'support'][1],
+                                 team_1_captain=captain1,
+                                 team_2_captain=captain2)
+
         return team1, team2, captain1, captain2, "Teams generated successfully"
 
+    def winner1(self):
+        self.current_game.winner='team1'
+        self.current_game.log_game('archive/games.csv')
+        self.queue.is_active = 'inactive'
+        self.current_game = None
 
+    def winner2(self):
+        self.current_game.winner='team2'
+        self.current_game.log_game('archive/games.csv')
+        self.queue.is_active = 'inactive'
+        self.current_game = None
