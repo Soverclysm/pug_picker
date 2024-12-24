@@ -51,7 +51,7 @@ class Game:
             player_team = 'team1' if player in game_dic['team_1'] else 'team2'
             player_captain = (player == game_dic['team_1_captain'] or player ==
                               game_dic['team_2_captain'])
-            result = player_team == game_dic['winner']
+            result = int(player_team == game_dic['winner'])
 
             player_dic = {
                 'game_id' : game_dic['game_id'],
