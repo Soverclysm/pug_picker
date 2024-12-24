@@ -34,18 +34,39 @@ class Game:
         timestamp_temp = datetime.datetime.now()
         self.timestamp = timestamp_temp.strftime("%Y%m%d-%H%M%S")
         self.game_id = timestamp_temp.strftime("%Y%m%d%H%M%S")
+    def _return_role(self, player):
+        if player in [self.team_1_tank, self.team_2_tank]:
+            return 'tank'
+        if player in [self.team_1_dps1, self.team_1_dps2, self.team_2_dps1,
+                      self.team_2_dps2]:
+            return 'dps'
+        if player in [self.team_1_support1, self.team_1_support2,
+                      self.team_2_support1, self.team_2_support2]:
+            return 'support'
 
     def log_game(self, file):
         game_dic = vars(self)
 
-        game_dic['team_1'] = '|'.join(self.team_1)
-        game_dic['team_2'] = '|'.join(self.team_2)
-        game_dic['players'] = '|'.join(self.players)
+        for player in game_dic['players']:
+            player_team = 'team1' if player in game_dic['team_1'] else 'team2'
+            player_captain = (player == game_dic['team_1_captain'] or player ==
+                              game_dic['team_2_captain'])
+            result = player_team == game_dic['winner']
 
-        file_exists = os.path.exists(file)
+            player_dic = {
+                'game_id' : game_dic['game_id'],
+                'nickname' : player,
+                'role' : self._return_role(player),
+                'timestamp' : game_dic['timestamp'],
+                'team' : player_team,
+                'captain' : player_captain,
+                'result' : result
+            }
 
-        with open(file, 'a', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames = game_dic.keys())
-            if not file_exists:
-                writer.writeheader()
-            writer.writerow(game_dic)
+            file_exists = os.path.exists(file)
+
+            with open(file, 'a', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=player_dic.keys())
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerow(player_dic)
