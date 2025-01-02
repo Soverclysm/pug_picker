@@ -2,6 +2,10 @@ import csv
 from dataclasses import dataclass
 import datetime
 import os
+import sqlite3
+
+from statsmodels.stats.rates import nonequivalence_poisson_2indep
+
 
 @dataclass
 class Game:
@@ -23,6 +27,8 @@ class Game:
     team_1: tuple[str, ...] = None
     team_2: tuple[str, ...] = None
     game_id: str = None
+    team_1_avg_sr: int = None
+    team_2_avg_sr: int = None
 
 
     def __post_init__(self):
@@ -70,3 +76,5 @@ class Game:
                 if not file_exists:
                     writer.writeheader()
                 writer.writerow(player_dic)
+
+
