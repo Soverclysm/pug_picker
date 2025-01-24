@@ -6,7 +6,7 @@ from src.bot.twitch_bot import PickBot
 
 def main():
     st.title("PUG Picker")
-
+    print("Started!")
     # Initialize session state values
     if 'bot_initialized' not in st.session_state:
         st.session_state.bot = PickBot()
@@ -19,7 +19,6 @@ def main():
         thread = threading.Thread(target=run_bot, args=(st.session_state.bot,))
         thread.daemon = True
         thread.start()
-
     # Now we can safely access the bot
     bot = st.session_state.bot
 
@@ -32,16 +31,12 @@ def main():
         st.error("Not connected to Twitch")
 
     # Controls in a nice row
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("Toggle Queue"):
             status = bot.toggle_queue()
             st.info(status)
     with col2:
-        if st.button("Toggle Repeats"):
-            repeats = bot.toggle_repeats()
-            st.info(f"Repeats {'enabled' if repeats else 'disabled'}")
-    with col3:
         if st.button('Reenable Queue without clearing'):
             bot.queue.is_active = 'active'
 
@@ -54,7 +49,7 @@ def main():
     with col3:
         if st.button('Enough Players?'):
             all_players = bot.queue.support | bot.queue.tank | bot.queue.dps
-            valid_players = all_players - bot._already_played
+            valid_players = all_players
             if len(valid_players) < 10:
                 st.write(f'There is not enough players, only '
                          f'{len(valid_players)} valid players.')

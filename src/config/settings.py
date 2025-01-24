@@ -16,10 +16,15 @@ else:
     config['Bot'] = {
         'admins' : 'commanderx, noidea100'
     }
+    config['Database'] = {
+        'path': 'archive/database.db'
+    }
+
 
 TWITCH_CHANNEL = config.get('Twitch', 'channel')
 TWITCH_BOT_USERNAME = config.get('Twitch', 'bot_username')
 TWITCH_OAUTH_TOKEN = config.get('Twitch', 'oauth_token')
 TWITCH_WEBSOCKET_URI = 'wss://irc-ws.chat.twitch.tv:443'
+DB_FILE = config.get('Database', 'path', fallback='archive/database.db')
 
 BOT_ADMINS = {admin.strip() for admin in config.get('Bot', 'admins').split(',')}

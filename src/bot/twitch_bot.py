@@ -5,7 +5,7 @@ import re
 from src.config.settings import *
 from src.bot.queue import Queue
 from src.bot.game_log import *
-
+from src.bot.database import *
 
 class PickBot:
     def __init__(self):
@@ -13,15 +13,40 @@ class PickBot:
         self.starter_names = BOT_ADMINS
         self.uri = TWITCH_WEBSOCKET_URI
         self.queue = Queue()
-        self._already_played = set()
         self.account_name = TWITCH_BOT_USERNAME
         self.token = TWITCH_OAUTH_TOKEN
-        self._repeats_okay = False
         self.chat_message_pattern = re.compile(
             r'^:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.*)$')
         self.websocket = None
         self.reconnect_delay = 3
         self.current_game = None
+        initialize_priority_database()
+
+    def calculate_priority_score(self, times_queued, last_game_timestamp):
+        if last_game_timestamp == 0:
+            days_since_last_game = 30
+        else:
+            days_since_last_game = ((datetime.datetime.now().timestamp() - last_game_timestamp) / (24 * 3600))
+        return (times_queued ** 2) * 0.7 + days_since_last_game * 0.3
+
+    def weighted_random_sample(self, players, k):
+        if not players:
+            return []
+
+        weights = []
+        player_list = list(players)
+
+        for player in player_list:
+            times_queued, last_timestamp = get_player_priority(player)
+            priority_score = self.calculate_priority_score(times_queued,
+                                                           last_timestamp)
+            weights.append(priority_score)
+
+        min_weight = min(weights)
+        if min_weight < 0:
+            weights = [w - min_weight + 1 for w in weights]
+
+        return random.choices(player_list, weights=weights, k=k)
 
     async def connect_and_run(self):
         while True:  # Main reconnection loop
@@ -64,20 +89,20 @@ class PickBot:
         queued_tanks = set(self.queue.tank)
         queued_dps = set(self.queue.dps)
         queued_support = set(self.queue.support)
-        if not self._repeats_okay:
-            valid_tanks = queued_tanks - self._already_played
-            valid_dps = queued_dps - self._already_played
-            valid_supports = queued_support - self._already_played
-        else:
-            valid_tanks = queued_tanks
-            valid_dps = queued_dps
-            valid_supports = queued_support
+
+        all_queued = queued_tanks | queued_dps | queued_support
+        increment_all_players(all_queued)
+
+
+        valid_tanks = queued_tanks
+        valid_dps = queued_dps
+        valid_supports = queued_support
 
         if len(valid_tanks) < 2 or len(valid_dps) < 4 or len(
                 valid_supports) < 4:
             return None, None, None, None
 
-        selected_tanks = random.sample(list(valid_tanks), 2)
+        selected_tanks = self.weighted_random_sample(valid_tanks, 2)
 
         valid_dps -= set(selected_tanks)
         valid_supports -= set(selected_tanks)
@@ -85,17 +110,14 @@ class PickBot:
         if len(valid_dps) < 4 or len(valid_supports) < 4:
             return None, None, None, None
 
-        selected_dps = random.sample(list(valid_dps), 4)
+        selected_dps = self.weighted_random_sample(valid_dps, 4)
 
         valid_supports -= set(selected_dps)
 
         if len(valid_supports) < 4:
             return None, None, None, None
 
-        selected_supports = random.sample(list(valid_supports), 4)
-
-        self._already_played.update(set(selected_tanks), set(selected_dps),
-                                    set(selected_supports))
+        selected_supports = self.weighted_random_sample(valid_supports, 4)
 
         team_1 = {'tank': selected_tanks[0], 'dps': selected_dps[0:2],
                   'support': selected_supports[0:2]}
@@ -109,6 +131,9 @@ class PickBot:
 
         captain1 = random.choice(list(team_1_set))
         captain2 = random.choice(list(team_2_set))
+
+        picked_players = set(selected_tanks + selected_dps + selected_supports)
+        reset_priorities(picked_players)
 
         return team_1, team_2, captain1, captain2
 
@@ -187,16 +212,6 @@ class PickBot:
                     await self._send_status()
                 return
 
-            elif (content == '!allow_repeats' and self.queue.is_active ==
-                  'inactive' and self._repeats_okay == False):
-                self._repeats_okay = True  #
-                self._already_played = set()
-                return
-            elif (content == '!disallow_repeats' and self.queue.is_active ==
-                  'inactive' and self._repeats_okay == True):
-                self._repeats_okay = False
-                return
-
             if content == '!status':
                 await self._send_status()
                 return
@@ -261,12 +276,6 @@ class PickBot:
             'support_players': list(self.queue.support)
         }
 
-    def toggle_repeats(self):
-        """Toggle whether repeat players are allowed"""
-        self._repeats_okay = not self._repeats_okay
-        if self._repeats_okay:
-            self._already_played.clear()
-        return self._repeats_okay
 
     def generate_teams(self):
         """Generate teams and return result"""

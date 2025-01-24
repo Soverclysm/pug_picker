@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from matplotlib.figure import figaspect
 
 
 class PUGAnalysis:
@@ -31,7 +30,7 @@ class PUGAnalysis:
     def plot_winrates(self, players, style = 'separate'):
         if style == 'overlay':
             fig = self._plot_winrates_overlay(players)
-        if style == 'separate':
+        else:
             fig = self._plot_winrates_separate(players)
         return fig
 

@@ -2,9 +2,6 @@ import csv
 from dataclasses import dataclass
 import datetime
 import os
-import sqlite3
-
-from statsmodels.stats.rates import nonequivalence_poisson_2indep
 
 
 @dataclass
