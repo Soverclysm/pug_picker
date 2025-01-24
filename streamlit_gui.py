@@ -94,14 +94,14 @@ def main():
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    st.subheader('Team Red')
+                    st.subheader('Team Blue')
                     st.write(f"Tank: {team1['tank']}")
                     st.write(f"DPS: {', '.join(team1['dps'])}")
                     st.write(f"Support: {', '.join(team1['support'])}")
                     st.write(f"**Captain**: {captain1}")
 
                 with col2:
-                    st.subheader('Team Blue')
+                    st.subheader('Team Red')
                     st.write(f"Tank: {team2['tank']}")
                     st.write(f"DPS: {', '.join(team2['dps'])}")
                     st.write(f"Support: {', '.join(team2['support'])}")
