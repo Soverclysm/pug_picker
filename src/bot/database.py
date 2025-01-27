@@ -11,7 +11,8 @@ def initialize_elo_database(self, file):
         elo INTEGER DEFAULT 1500,
         peak_elo INTEGER DEFAULT 1500,
         games_played INTEGER DEFAULT 0,
-        last_updated INTEGER DEFAULT 0
+        last_updated INTEGER DEFAULT 0,
+        last_deviation REAL DEFAULT 0
     )
     ''')
 
@@ -41,10 +42,10 @@ def update_elo( file, player, elo):
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    conn.execute('''UPDATE player_ratings SET elo = ?, last_updated = ? 
+    conn.execute('''UPDATE player_ratings SET elo = ?, last_updated = ?, last_deviation = ? 
     WHERE 
     nickname = ?''',
-                 (elo, timestamp, player))
+                 (elo, timestamp, deviation, player))
 
     conn.commit()
     conn.close()
