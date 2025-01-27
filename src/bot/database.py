@@ -36,7 +36,7 @@ def read_elo(self, file, player, change):
     return elo
 
 
-def update_elo( file, player, elo):
+def update_elo( file, player, elo, deviation):
     conn = sqlite3.connect(file)
     cursor = conn.cursor()
 
