@@ -6,6 +6,7 @@ from src.config.settings import *
 from src.bot.queue import Queue
 from src.bot.game_log import *
 from src.bot.database import *
+import math
 
 class PickBot:
     def __init__(self):
@@ -305,7 +306,29 @@ class PickBot:
 
         return team1, team2, captain1, captain2, "Teams generated successfully"
 
+    def calculate_elo(self, old_elo, old_dev, avg_enemy_ranking, wl): #wl is outcome of game: 1 is win, 0.5 is draw, 0 is loss
+        q = 0.00575646273
+        g = 1 / math.sqrt(1 + ((3 * q**2 * old_dev**2)/math.pi**2))
+        E = 1 / (1 + 10 ** (g * (old_elo - avg_enemy_ranking)/-400))
+        d2 = 1 / ((q ** 2) * (g ** 2) * E * (1-E))
+        dnmntr = (1/old_dev**2) + (1/d2)
+        new_rating = old_elo + ((q/dnmntr) * g * (wl - E))
+        return new_rating
+
+    def calculate_deviation(self, old_dev):
+        return 300
+
     def winner1(self):
+        team2_elo_mean = 0
+        for player in self.current_game.team_2:
+            team2_elo_mean = team2_elo_mean + read_elo(player=player)
+        team2_elo_mean = team2_elo_mean / 5 # hardcoded for 5 players, maybe could make this variable for 6v6?
+
+        for player in self.current_game.team_1:
+            dev = read_deviation(player=player)
+            new_elo = calculate_elo(read_elo(player=player), dev, team2_elo_mean, 1)
+            new_deviation = calculate_deviation(dev)
+
         self.current_game.winner='team1'
         self.current_game.log_game('archive/games.csv')
         self.queue.is_active = 'inactive'
@@ -316,3 +339,4 @@ class PickBot:
         self.current_game.log_game('archive/games.csv')
         self.queue.is_active = 'inactive'
         self.current_game = None
+

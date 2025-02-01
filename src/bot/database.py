@@ -12,7 +12,7 @@ def initialize_elo_database(self, file):
         peak_elo INTEGER DEFAULT 1500,
         games_played INTEGER DEFAULT 0,
         last_updated INTEGER DEFAULT 0,
-        last_deviation REAL DEFAULT 0
+        last_deviation REAL DEFAULT 300
     )
     ''')
 
@@ -49,6 +49,21 @@ def update_elo( file, player, elo, deviation):
 
     conn.commit()
     conn.close()
+
+def read_deviation(self, file, player, change):
+    conn = sqlite3.connect(file)
+    cursor = conn.cursor()
+
+    cursor.execute('''
+    INSERT OR IGNORE INTO player_ratings (nickname) VALUES (?)''',
+                   (player,))
+    cursor.execute('SELECT last_deviation FROM player_ratings WHERE nickname = ?',
+                   (player,))
+    elo = cursor.fetchone()[0]
+
+    conn.commit()
+    conn.close()
+    return elo
 
 def initialize_priority_database():
     conn = sqlite3.connect(DB_FILE)
